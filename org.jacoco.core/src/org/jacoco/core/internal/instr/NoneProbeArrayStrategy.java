@@ -29,4 +29,12 @@ class NoneProbeArrayStrategy implements IProbeArrayStrategy {
 		// nothing to do
 	}
 
+	public void recordHit(final MethodVisitor mv, final int id, final int variable) {
+		// nothing to do
+	}
+
+	public boolean useVariable() {
+		return false;
+	}
+
 }

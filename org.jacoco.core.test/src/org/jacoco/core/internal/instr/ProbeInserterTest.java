@@ -46,6 +46,28 @@ public class ProbeInserterTest {
 
 			public void addMembers(ClassVisitor delegate, int probeCount) {
 			}
+
+			public void recordHit(MethodVisitor mv, int id, int variable) {
+				mv.visitVarInsn(Opcodes.ALOAD, variable);
+				// Stack[0]: [Z
+
+				InstrSupport.push(mv, id);
+
+				// Stack[1]: I
+				// Stack[0]: [Z
+
+				mv.visitInsn(Opcodes.ICONST_1);
+
+				// Stack[2]: 1
+				// Stack[1]: I
+				// Stack[0]: [Z
+
+				mv.visitInsn(Opcodes.BASTORE);
+			}
+
+			public boolean useVariable() {
+				return true;
+			}
 		};
 	}
 
