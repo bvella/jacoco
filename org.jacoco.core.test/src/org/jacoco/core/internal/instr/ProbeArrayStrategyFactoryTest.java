@@ -15,6 +15,7 @@ package org.jacoco.core.internal.instr;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
@@ -53,7 +54,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(false);
+		assertInitAndHitMethod(false, false);
 	}
 
 	@Test
@@ -62,7 +63,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(false);
+		assertInitAndHitMethod(false, false);
 	}
 
 	@Test
@@ -71,7 +72,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(false);
+		assertInitAndHitMethod(false, false);
 	}
 
 	@Test
@@ -80,7 +81,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(false);
+		assertInitAndHitMethod(false, false);
 	}
 
 	@Test
@@ -89,7 +90,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(false);
+		assertInitAndHitMethod(false, false);
 	}
 
 	@Test
@@ -98,7 +99,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(true);
+		assertInitAndHitMethod(true, false);
 	}
 
 	@Test
@@ -107,7 +108,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(true);
+		assertInitAndHitMethod(true, false);
 	}
 
 	@Test
@@ -116,7 +117,7 @@ public class ProbeArrayStrategyFactoryTest {
 				true);
 		assertEquals(ClassFieldProbeArrayStrategy.class, strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_ACC);
-		assertInitMethod(true);
+		assertInitAndHitMethod(true, false);
 
 		strategy.storeInstance(cv.visitMethod(0, null, null, null, null), false,
 				0);
@@ -155,7 +156,7 @@ public class ProbeArrayStrategyFactoryTest {
 		assertEquals(InterfaceFieldProbeArrayStrategy.class,
 				strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_INTF_ACC);
-		assertInitAndClinitMethods();
+		assertInitAndClinitMethods(true);
 
 		strategy.storeInstance(cv.visitMethod(0, null, null, null, null), false,
 				0);
@@ -206,7 +207,7 @@ public class ProbeArrayStrategyFactoryTest {
 		assertEquals(InterfaceFieldProbeArrayStrategy.class,
 				strategy.getClass());
 		assertDataField(InstrSupport.DATAFIELD_INTF_ACC);
-		assertInitAndClinitMethods();
+		assertInitAndClinitMethods(true);
 
 		strategy.storeInstance(cv.visitMethod(0, "<clinit>", null, null, null),
 				true, 0);
@@ -225,7 +226,7 @@ public class ProbeArrayStrategyFactoryTest {
 
 		assertEquals(CondyProbeArrayStrategy.class, strategy.getClass());
 		assertNoDataField();
-		assertCondyBootstrapMethod();
+		assertCondyBootstrapMethod(false);
 	}
 
 	@Test
@@ -235,7 +236,7 @@ public class ProbeArrayStrategyFactoryTest {
 
 		assertEquals(CondyProbeArrayStrategy.class, strategy.getClass());
 		assertNoDataField();
-		assertCondyBootstrapMethod();
+		assertCondyBootstrapMethod(true);
 	}
 
 	@Test
@@ -329,6 +330,15 @@ public class ProbeArrayStrategyFactoryTest {
 			assertEquals(Boolean.valueOf(frames), Boolean.valueOf(frames));
 		}
 
+		void assertHitMethod(String expectedDesc, boolean frames,
+				boolean iface) {
+			assertEquals(InstrSupport.HITMETHOD_NAME, name);
+			assertEquals(expectedDesc, desc);
+			assertEquals(InstrSupport.HITMETHOD_ACC
+					| (iface ? Opcodes.ACC_INTERFACE : 0), access);
+			assertEquals(Boolean.valueOf(frames), Boolean.valueOf(frames));
+		}
+
 		void assertClinit() {
 			assertEquals(InstrSupport.CLINIT_NAME, name);
 			assertEquals(InstrSupport.CLINIT_DESC, desc);
@@ -377,12 +387,16 @@ public class ProbeArrayStrategyFactoryTest {
 					assertEquals(InstrSupport.DATAFIELD_DESC, desc);
 
 					if (opcode == Opcodes.GETSTATIC) {
-						assertEquals(InstrSupport.INITMETHOD_NAME,
-								methods.get(methods.size() - 1).name);
+						assertTrue(methods.get(methods.size() - 1).name
+								.equals(InstrSupport.INITMETHOD_NAME)
+								|| methods.get(methods.size() - 1).name
+										.equals(InstrSupport.HITMETHOD_NAME));
 					} else if (opcode == Opcodes.PUTSTATIC) {
 						if (isInterface) {
-							assertEquals(InstrSupport.CLINIT_NAME,
-									methods.get(methods.size() - 1).name);
+							assertTrue(methods.get(methods.size() - 1).name
+									.equals(InstrSupport.CLINIT_NAME)
+									|| methods.get(methods.size() - 1).name
+											.equals(InstrSupport.INITMETHOD_NAME));
 						} else {
 							assertEquals(InstrSupport.INITMETHOD_NAME,
 									methods.get(methods.size() - 1).name);
@@ -406,7 +420,7 @@ public class ProbeArrayStrategyFactoryTest {
 					assertEquals(Opcodes.INVOKESTATIC, opcode);
 					assertEquals("Foo", owner);
 					assertEquals(InstrSupport.INITMETHOD_NAME, name);
-					assertEquals(InstrSupport.INITMETHOD_DESC, desc);
+					assertEquals(InstrSupport.INITMETHOD_NORETURN_DESC, desc);
 				}
 			};
 		}
@@ -421,22 +435,29 @@ public class ProbeArrayStrategyFactoryTest {
 		assertNull(cv.fieldName);
 	}
 
-	void assertInitMethod(boolean frames) {
-		assertEquals(cv.methods.size(), 1);
-		cv.methods.get(0).assertInitMethod(InstrSupport.INITMETHOD_DESC,
-				frames);
+	void assertInitAndHitMethod(boolean frames, boolean iface) {
+		assertEquals(2, cv.methods.size());
+		cv.methods.get(0).assertInitMethod(
+				InstrSupport.INITMETHOD_NORETURN_DESC, frames);
+		cv.methods.get(1).assertHitMethod(InstrSupport.HITMETHOD_DESC, frames,
+				iface);
 	}
 
-	void assertCondyBootstrapMethod() {
-		assertEquals(cv.methods.size(), 1);
+	void assertCondyBootstrapMethod(boolean iface) {
+		assertEquals(2, cv.methods.size());
 		cv.methods.get(0).assertInitMethod(CondyProbeArrayStrategy.B_DESC,
 				false);
+		cv.methods.get(1).assertHitMethod(InstrSupport.HITMETHOD_DESC, false,
+				iface);
 	}
 
-	void assertInitAndClinitMethods() {
-		assertEquals(2, cv.methods.size());
-		cv.methods.get(0).assertInitMethod(InstrSupport.INITMETHOD_DESC, true);
+	void assertInitAndClinitMethods(boolean iface) {
+		assertEquals(3, cv.methods.size());
+		cv.methods.get(0)
+				.assertInitMethod(InstrSupport.INITMETHOD_NORETURN_DESC, true);
 		cv.methods.get(1).assertClinit();
+		cv.methods.get(2).assertHitMethod(InstrSupport.HITMETHOD_DESC, true,
+				iface);
 	}
 
 	void assertNoInitMethod() {

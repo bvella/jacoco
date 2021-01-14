@@ -46,4 +46,18 @@ public interface IProbeArrayStrategy {
 	 */
 	void addMembers(ClassVisitor cv, int probeCount);
 
+	/**
+	 * Records a hit
+	 *
+	 * @param mv
+	 *            visitor to create code
+	 * @param id
+	 *            the index in the array of the hit being recorded
+	 * @param variable
+	 *            variable index to store probe array to
+	 */
+	void recordHit(MethodVisitor mv, int id, int variable);
+
+	boolean useVariable();
+
 }

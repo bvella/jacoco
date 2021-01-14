@@ -70,4 +70,10 @@ public class ClassInstrumenterTest implements IProbeArrayStrategy {
 	public void addMembers(ClassVisitor cv, int probeCount) {
 	}
 
+	public void recordHit(MethodVisitor mv, int id, int variable) {
+	}
+
+	public boolean useVariable() {
+		return false;
+	}
 }

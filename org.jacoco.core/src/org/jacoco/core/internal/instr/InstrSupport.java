@@ -93,9 +93,30 @@ public final class InstrSupport {
 	public static final String INITMETHOD_DESC = "()[Z";
 
 	/**
+	 * Descriptor of the initialization method.
+	 */
+	public static final String INITMETHOD_NORETURN_DESC = "()V";
+
+	/**
 	 * Access modifiers of the initialization method.
 	 */
 	public static final int INITMETHOD_ACC = Opcodes.ACC_SYNTHETIC
+			| Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC;
+
+	/**
+	 * Name of the hit method.
+	 */
+	public static final String HITMETHOD_NAME = "$jacocoHit";
+
+	/**
+	 * Descriptor of the hit method.
+	 */
+	public static final String HITMETHOD_DESC = "(I)V";
+
+	/**
+	 * Access modifiers of the hit method.
+	 */
+	public static final int HITMETHOD_ACC = Opcodes.ACC_SYNTHETIC
 			| Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC;
 
 	/**

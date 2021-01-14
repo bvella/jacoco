@@ -69,26 +69,7 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
 	}
 
 	public void insertProbe(final int id) {
-
-		// For a probe we set the corresponding position in the boolean[] array
-		// to true.
-
-		mv.visitVarInsn(Opcodes.ALOAD, variable);
-
-		// Stack[0]: [Z
-
-		InstrSupport.push(mv, id);
-
-		// Stack[1]: I
-		// Stack[0]: [Z
-
-		mv.visitInsn(Opcodes.ICONST_1);
-
-		// Stack[2]: I
-		// Stack[1]: I
-		// Stack[0]: [Z
-
-		mv.visitInsn(Opcodes.BASTORE);
+		arrayStrategy.recordHit(mv, id, variable);
 	}
 
 	@Override
@@ -128,19 +109,29 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
 
 	@Override
 	public void visitMaxs(final int maxStack, final int maxLocals) {
-		// Max stack size of the probe code is 3 which can add to the
-		// original stack size depending on the probe locations. The accessor
-		// stack size is an absolute maximum, as the accessor code is inserted
-		// at the very beginning of each method when the stack size is empty.
-		final int increasedStack = Math.max(maxStack + 3, accessorStackSize);
-		mv.visitMaxs(increasedStack, maxLocals + 1);
+		if (arrayStrategy.useVariable()) {
+			// Max stack size of the probe code is 3 which can add to the
+			// original stack size depending on the probe locations. The
+			// accessor
+			// stack size is an absolute maximum, as the accessor code is
+			// inserted
+			// at the very beginning of each method when the stack size is
+			// empty.
+			final int increasedStack = Math.max(maxStack + 3,
+					accessorStackSize);
+			mv.visitMaxs(increasedStack, maxLocals + 1);
+		} else {
+			final int increasedStack = Math.max(maxStack + 1,
+					accessorStackSize);
+			mv.visitMaxs(increasedStack, maxLocals);
+		}
 	}
 
 	private int map(final int var) {
-		if (var < variable) {
-			return var;
-		} else {
+		if (arrayStrategy.useVariable() && (var >= variable)) {
 			return var + 1;
+		} else {
+			return var;
 		}
 	}
 
@@ -148,35 +139,40 @@ class ProbeInserter extends MethodVisitor implements IProbeInserter {
 	public final void visitFrame(final int type, final int nLocal,
 			final Object[] local, final int nStack, final Object[] stack) {
 
-		if (type != Opcodes.F_NEW) { // uncompressed frame
-			throw new IllegalArgumentException(
-					"ClassReader.accept() should be called with EXPAND_FRAMES flag");
-		}
+		if (arrayStrategy.useVariable()) {
+			if (type != Opcodes.F_NEW) { // uncompressed frame
+				throw new IllegalArgumentException(
+						"ClassReader.accept() should be called with EXPAND_FRAMES flag");
+			}
 
-		final Object[] newLocal = new Object[Math.max(nLocal, variable) + 1];
-		int idx = 0; // Arrays index for existing locals
-		int newIdx = 0; // Array index for new locals
-		int pos = 0; // Current variable position
-		while (idx < nLocal || pos <= variable) {
-			if (pos == variable) {
-				newLocal[newIdx++] = InstrSupport.DATAFIELD_DESC;
-				pos++;
-			} else {
-				if (idx < nLocal) {
-					final Object t = local[idx++];
-					newLocal[newIdx++] = t;
+			final Object[] newLocal = new Object[Math.max(nLocal, variable)
+					+ 1];
+			int idx = 0; // Arrays index for existing locals
+			int newIdx = 0; // Array index for new locals
+			int pos = 0; // Current variable position
+			while (idx < nLocal || pos <= variable) {
+				if (pos == variable) {
+					newLocal[newIdx++] = InstrSupport.DATAFIELD_DESC;
 					pos++;
-					if (t == Opcodes.LONG || t == Opcodes.DOUBLE) {
+				} else {
+					if (idx < nLocal) {
+						final Object t = local[idx++];
+						newLocal[newIdx++] = t;
+						pos++;
+						if (t == Opcodes.LONG || t == Opcodes.DOUBLE) {
+							pos++;
+						}
+					} else {
+						// Fill unused slots with TOP
+						newLocal[newIdx++] = Opcodes.TOP;
 						pos++;
 					}
-				} else {
-					// Fill unused slots with TOP
-					newLocal[newIdx++] = Opcodes.TOP;
-					pos++;
 				}
 			}
+			mv.visitFrame(type, newIdx, newLocal, nStack, stack);
+		} else {
+			mv.visitFrame(type, nLocal, local, nStack, stack);
 		}
-		mv.visitFrame(type, newIdx, newLocal, nStack, stack);
 	}
 
 }
