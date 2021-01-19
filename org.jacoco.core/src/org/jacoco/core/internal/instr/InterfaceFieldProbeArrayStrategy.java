@@ -81,8 +81,7 @@ class InterfaceFieldProbeArrayStrategy implements IProbeArrayStrategy {
 			final int variable) {
 		InstrSupport.push(mv, id);
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, className,
-				InstrSupport.HITMETHOD_NAME, InstrSupport.HITMETHOD_DESC,
-				false);
+				InstrSupport.HITMETHOD_NAME, InstrSupport.HITMETHOD_DESC, true);
 	}
 
 	public boolean useVariable() {
@@ -149,8 +148,7 @@ class InterfaceFieldProbeArrayStrategy implements IProbeArrayStrategy {
 	}
 
 	private void createHitMethod(final ClassVisitor cv) {
-		final MethodVisitor mv = cv.visitMethod(
-				InstrSupport.INITMETHOD_ACC | Opcodes.ACC_INTERFACE,
+		final MethodVisitor mv = cv.visitMethod(InstrSupport.INITMETHOD_ACC,
 				InstrSupport.HITMETHOD_NAME, InstrSupport.HITMETHOD_DESC, null,
 				null);
 		mv.visitCode();

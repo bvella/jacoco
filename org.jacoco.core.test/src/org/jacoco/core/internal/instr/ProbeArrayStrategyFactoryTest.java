@@ -334,8 +334,7 @@ public class ProbeArrayStrategyFactoryTest {
 				boolean iface) {
 			assertEquals(InstrSupport.HITMETHOD_NAME, name);
 			assertEquals(expectedDesc, desc);
-			assertEquals(InstrSupport.HITMETHOD_ACC
-					| (iface ? Opcodes.ACC_INTERFACE : 0), access);
+			assertEquals(InstrSupport.HITMETHOD_ACC, access);
 			assertEquals(Boolean.valueOf(frames), Boolean.valueOf(frames));
 		}
 

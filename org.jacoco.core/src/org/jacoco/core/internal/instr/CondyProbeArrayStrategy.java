@@ -76,7 +76,7 @@ public class CondyProbeArrayStrategy implements IProbeArrayStrategy {
 		InstrSupport.push(mv, id);
 		mv.visitMethodInsn(Opcodes.INVOKESTATIC, className,
 				InstrSupport.HITMETHOD_NAME, InstrSupport.HITMETHOD_DESC,
-				false);
+				isInterface);
 	}
 
 	public boolean useVariable() {
@@ -85,9 +85,7 @@ public class CondyProbeArrayStrategy implements IProbeArrayStrategy {
 
 	static void createHitMethod(final ClassVisitor cv, final String className,
 			final boolean isInterface) {
-		final MethodVisitor mv = cv.visitMethod(
-				InstrSupport.INITMETHOD_ACC
-						| (isInterface ? Opcodes.ACC_INTERFACE : 0),
+		final MethodVisitor mv = cv.visitMethod(InstrSupport.INITMETHOD_ACC,
 				InstrSupport.HITMETHOD_NAME, InstrSupport.HITMETHOD_DESC, null,
 				null);
 		mv.visitCode();
