@@ -25,16 +25,11 @@ import org.objectweb.asm.Opcodes;
  */
 class InterfaceFieldProbeArrayStrategy implements IProbeArrayStrategy {
 
-	/**
-	 * Frame stack with a single boolean array.
-	 */
-	private static final Object[] FRAME_STACK_ARRZ = new Object[] {
+	private static final Object[] FRAME_EMPTY = new Object[0];
+	private static final Object[] FRAME_INTEGER = new Object[] {
+			Opcodes.INTEGER };
+	private static final Object[] FRAME_HITS_ARRAY = new Object[] {
 			InstrSupport.DATAFIELD_DESC };
-
-	/**
-	 * Empty frame locals.
-	 */
-	private static final Object[] FRAME_LOCALS_EMPTY = new Object[0];
 
 	private final String className;
 	private final long classId;
@@ -60,25 +55,15 @@ class InterfaceFieldProbeArrayStrategy implements IProbeArrayStrategy {
 
 			// Stack[0]: [Z
 
-			mv.visitInsn(Opcodes.DUP);
-
-			// Stack[1]: [Z
-			// Stack[0]: [Z
-
 			mv.visitFieldInsn(Opcodes.PUTSTATIC, className,
 					InstrSupport.DATAFIELD_NAME, InstrSupport.DATAFIELD_DESC);
 
-			// Stack[0]: [Z
-
-			mv.visitVarInsn(Opcodes.ASTORE, variable);
-
 			seenClinit = true;
-			return Math.max(maxStack, 2);
+			return Math.max(maxStack, 1);
 		} else {
 			mv.visitMethodInsn(Opcodes.INVOKESTATIC, className,
-					InstrSupport.INITMETHOD_NAME, InstrSupport.INITMETHOD_DESC,
-					true);
-			mv.visitVarInsn(Opcodes.ASTORE, variable);
+					InstrSupport.INITMETHOD_NAME,
+					InstrSupport.INITMETHOD_NORETURN_DESC, true);
 			return 1;
 		}
 	}
@@ -89,6 +74,18 @@ class InterfaceFieldProbeArrayStrategy implements IProbeArrayStrategy {
 		if (!seenClinit) {
 			createClinitMethod(cv, probeCount);
 		}
+		createHitMethod(cv);
+	}
+
+	public void recordHit(final MethodVisitor mv, final int id,
+			final int variable) {
+		InstrSupport.push(mv, id);
+		mv.visitMethodInsn(Opcodes.INVOKESTATIC, className,
+				InstrSupport.HITMETHOD_NAME, InstrSupport.HITMETHOD_DESC, true);
+	}
+
+	public boolean useVariable() {
+		return false;
 	}
 
 	private void createDataField(final ClassVisitor cv) {
@@ -99,37 +96,34 @@ class InterfaceFieldProbeArrayStrategy implements IProbeArrayStrategy {
 
 	private void createInitMethod(final ClassVisitor cv, final int probeCount) {
 		final MethodVisitor mv = cv.visitMethod(InstrSupport.INITMETHOD_ACC,
-				InstrSupport.INITMETHOD_NAME, InstrSupport.INITMETHOD_DESC,
-				null, null);
+				InstrSupport.INITMETHOD_NAME,
+				InstrSupport.INITMETHOD_NORETURN_DESC, null, null);
 		mv.visitCode();
 
 		// Load the value of the static data field:
 		mv.visitFieldInsn(Opcodes.GETSTATIC, className,
 				InstrSupport.DATAFIELD_NAME, InstrSupport.DATAFIELD_DESC);
-		mv.visitInsn(Opcodes.DUP);
 
-		// Stack[1]: [Z
 		// Stack[0]: [Z
 
 		// Skip initialization when we already have a data array:
 		final Label alreadyInitialized = new Label();
 		mv.visitJumpInsn(Opcodes.IFNONNULL, alreadyInitialized);
 
-		// Stack[0]: [Z
-
-		mv.visitInsn(Opcodes.POP);
 		final int size = accessorGenerator.generateDataAccessor(classId,
 				className, probeCount, mv);
 
 		// Stack[0]: [Z
 
-		// Return the class' probe array:
-		mv.visitFrame(Opcodes.F_NEW, 0, FRAME_LOCALS_EMPTY, 1,
-				FRAME_STACK_ARRZ);
-		mv.visitLabel(alreadyInitialized);
-		mv.visitInsn(Opcodes.ARETURN);
+		mv.visitFieldInsn(Opcodes.PUTSTATIC, className,
+				InstrSupport.DATAFIELD_NAME, InstrSupport.DATAFIELD_DESC);
 
-		mv.visitMaxs(Math.max(size, 2), 0); // Maximum local stack size is 2
+		// Return the class' probe array:
+		mv.visitFrame(Opcodes.F_NEW, 0, FRAME_EMPTY, 0, FRAME_EMPTY);
+		mv.visitLabel(alreadyInitialized);
+		mv.visitInsn(Opcodes.RETURN);
+
+		mv.visitMaxs(Math.max(size, 1), 0); // Maximum local stack size is 1
 		mv.visitEnd();
 	}
 
@@ -150,6 +144,70 @@ class InterfaceFieldProbeArrayStrategy implements IProbeArrayStrategy {
 		mv.visitInsn(Opcodes.RETURN);
 
 		mv.visitMaxs(maxStack, 0);
+		mv.visitEnd();
+	}
+
+	private void createHitMethod(final ClassVisitor cv) {
+		final MethodVisitor mv = cv.visitMethod(InstrSupport.INITMETHOD_ACC,
+				InstrSupport.HITMETHOD_NAME, InstrSupport.HITMETHOD_DESC, null,
+				null);
+		mv.visitCode();
+
+		mv.visitFieldInsn(Opcodes.GETSTATIC, className,
+				InstrSupport.DATAFIELD_NAME, InstrSupport.DATAFIELD_DESC);
+
+		// Stack[0]: [Z
+
+		mv.visitInsn(Opcodes.DUP);
+
+		// Stack[1]: [Z
+		// Stack[0]: [Z
+
+		mv.visitVarInsn(Opcodes.ILOAD, 0);
+
+		// Stack[2]: I (index param)
+		// Stack[1]: [Z
+		// Stack[0]: [Z
+
+		mv.visitInsn(Opcodes.BALOAD);
+
+		// Stack[1]: Z (the previous hit boolean)
+		// Stack[0]: [Z
+
+		final Label alreadyHit = new Label();
+		mv.visitJumpInsn(Opcodes.IFNE, alreadyHit);
+
+		// Stack[0]: [Z
+
+		mv.visitInsn(Opcodes.DUP);
+
+		// Stack[1]: [Z
+		// Stack[0]: [Z
+
+		mv.visitVarInsn(Opcodes.ILOAD, 0);
+
+		// Stack[2]: I (index param)
+		// Stack[1]: [Z
+		// Stack[0]: [Z
+
+		mv.visitInsn(Opcodes.ICONST_1);
+
+		// Stack[3]: 1 (true)
+		// Stack[2]: I (index param)
+		// Stack[1]: [Z
+		// Stack[0]: [Z
+
+		mv.visitInsn(Opcodes.BASTORE);
+
+		// Stack[0]: [Z
+
+		mv.visitLabel(alreadyHit);
+		mv.visitFrame(Opcodes.F_FULL, 1, FRAME_INTEGER, 1, FRAME_HITS_ARRAY);
+		mv.visitInsn(Opcodes.POP);
+		mv.visitInsn(Opcodes.RETURN);
+
+		mv.visitMaxs(4, 1);
+
 		mv.visitEnd();
 	}
 
